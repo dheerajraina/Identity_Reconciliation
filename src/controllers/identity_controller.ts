@@ -11,6 +11,57 @@ let linked_emails_set: Set<string> = new Set();
 let linked_phone_numbers_set: Set<string> = new Set();
 let secondary_contact_ids: Set<number> = new Set();
 
+async function identity_controller(req: Request, res: Response): Promise<void> {
+	// Logic to fetch users from the database
+	const req_email: string = req.body.email || "";
+	const req_phone: string = req.body.phoneNumber || "";
+	clear_all_globals();
+	await Contact.findAll({
+		where: Sequelize.or({ email: req_email }, { phoneNumber: req_phone }),
+	}).then(async (result) => {
+		if (result.length == 0) {
+			await add_record(req_email, req_phone, null, "primary");
+			return res.json({
+				contact: {
+					primaryContatctId: newly_created_id,
+					emails: Array.from(email_store.keys()),
+					secondaryContactIds: [],
+				},
+			});
+		}
+		await store_all_phonenumbers_and_emails_and_primary_ids(result);
+
+		let primary_ids_list: number[] = await find_oldest_primary_record();
+
+		if (await update_records(primary_ids_list, oldest_record_id)) {
+			if (!phone_number_store.has(req_phone) || !email_store.has(req_email)) {
+				if (
+					req_email != null &&
+					req_phone != null &&
+					req_email.length > 0 &&
+					req_phone.length > 0
+				) {
+					await add_record(req_email, req_phone, oldest_record_id, "secondary");
+				}
+			}
+			await fetch_identity(oldest_record_id);
+			// linked_emails_set.keys()), Array.from(linked_phone_numbers_set.keys())
+			return res.json({
+				contact: {
+					primaryContatctId: oldest_record_id,
+					emails: Array.from(linked_emails_set.keys()), // first element being email of primary contact
+					phoneNumbers: Array.from(linked_phone_numbers_set.keys()), // first element being phoneNumber of primary contact
+					secondaryContactIds: Array.from(secondary_contact_ids), // Array of all Contact IDs that are "secondary" to the primary contact
+				},
+			});
+		} else {
+			return res.status(201).json({
+				message: "Server Error",
+			});
+		}
+	});
+}
+
 // stores all the emails,phone numbers,primary ids
 async function store_all_phonenumbers_and_emails_and_primary_ids(
 	all_contacts
@@ -45,7 +96,6 @@ async function store_all_phonenumbers_and_emails_and_primary_ids(
 	return;
 }
 
-
 // find the oldest primary record if more than one primary records match with the request payload
 function find_oldest_primary_record(): Promise<number[]> {
 	return new Promise(async (resolve, reject) => {
@@ -70,34 +120,6 @@ function find_oldest_primary_record(): Promise<number[]> {
 			resolve(primary_ids_list);
 		});
 	});
-}
-
-
-
-// updates older records if any primary contact changes to secondary and adds a linkedId
-async function update_records(target_id_list, replace_with): Promise<boolean> {
-	try {
-		await Contact.update(
-			{ linkPrecedence: "secondary", linkedId: oldest_record_id },
-			{
-				where: Sequelize.or(
-					{
-						id: {
-							[Op.in]: target_id_list,
-						},
-					},
-					{
-						linkedId: {
-							[Op.in]: target_id_list,
-						},
-					}
-				),
-			}
-		);
-		return true;
-	} catch (error) {
-		return false;
-	}
 }
 
 async function add_record(
@@ -128,6 +150,50 @@ async function add_record(
 	return;
 }
 
+// updates older records if any primary contact changes to secondary
+async function update_records(target_id_list, replace_with): Promise<boolean> {
+	try {
+		await Contact.update(
+			{ linkPrecedence: "secondary", linkedId: oldest_record_id },
+			{
+				where: Sequelize.or(
+					{
+						id: {
+							[Op.in]: target_id_list,
+						},
+					},
+					{
+						linkedId: {
+							[Op.in]: target_id_list,
+						},
+					}
+				),
+			}
+		);
+		return true;
+	} catch (error) {
+		return false;
+	}
+}
+
+// fetching the primary contact and all the linked contacts
+function fetch_identity(target_id): Promise<void> {
+	return new Promise(async (resolve, reject) => {
+		await Contact.findAll({
+			where: Sequelize.or({ id: target_id }, { linkedId: target_id }),
+		}).then((result) => {
+			result.forEach((element) => {
+				if (element.dataValues.id != target_id)
+					secondary_contact_ids.add(element.dataValues.id);
+				if (element.dataValues.email)
+					linked_emails_set.add(element.dataValues.email);
+				if (element.dataValues.phoneNumber)
+					linked_phone_numbers_set.add(element.dataValues.phoneNumber);
+			});
+		});
+		resolve();
+	});
+}
 
 function clear_all_globals() {
 	phone_number_store.clear();
@@ -139,3 +205,4 @@ function clear_all_globals() {
 	linked_phone_numbers_set.clear();
 	secondary_contact_ids.clear();
 }
+export default identity_controller;

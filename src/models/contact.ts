@@ -15,4 +15,4 @@ const Contact = sequelize.define("Contact", {
 	// createdAt and updatedAt added by default
 });
 
-export { Contact };
+export  default Contact ;

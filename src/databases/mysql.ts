@@ -7,7 +7,7 @@ export const connection = new Sequelize(
 	{
 		host: "localhost",
 		dialect: "mysql",
-                logging:true
+		logging: true,
 	}
 );
 export class My_Sql_Database {
@@ -19,4 +19,5 @@ export class My_Sql_Database {
 			console.error("Unable to connect to the database:", error);
 		}
 	}
+
 }
