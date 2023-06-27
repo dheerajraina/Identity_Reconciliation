@@ -73,6 +73,33 @@ function find_oldest_primary_record(): Promise<number[]> {
 }
 
 
+
+// updates older records if any primary contact changes to secondary and adds a linkedId
+async function update_records(target_id_list, replace_with): Promise<boolean> {
+	try {
+		await Contact.update(
+			{ linkPrecedence: "secondary", linkedId: oldest_record_id },
+			{
+				where: Sequelize.or(
+					{
+						id: {
+							[Op.in]: target_id_list,
+						},
+					},
+					{
+						linkedId: {
+							[Op.in]: target_id_list,
+						},
+					}
+				),
+			}
+		);
+		return true;
+	} catch (error) {
+		return false;
+	}
+}
+
 async function add_record(
 	email: string,
 	phone_number: string,
