@@ -45,6 +45,33 @@ async function store_all_phonenumbers_and_emails_and_primary_ids(
 	return;
 }
 
+async function add_record(
+	email: string,
+	phone_number: string,
+	linkedId: number,
+	linkPrecedence: string
+) {
+	await Contact.create({
+		email: email,
+		phoneNumber: phone_number,
+		linkedId: linkedId,
+		linkPrecedence: linkPrecedence,
+	}).then((result) => {
+		newly_created_id = result.dataValues.id;
+	});
+
+	if (phone_number) {
+		if (!phone_number_store.has(phone_number)) {
+			phone_number_store.set(phone_number, true);
+		}
+	}
+	if (email) {
+		if (!email_store.has(email)) {
+			email_store.set(email, true);
+		}
+	}
+	return;
+}
 
 
 function clear_all_globals() {
