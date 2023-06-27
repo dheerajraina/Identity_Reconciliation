@@ -1,11 +1,11 @@
 import { Sequelize } from "sequelize";
 export const connection = new Sequelize(
-	"identity_reconciliation",
-	"root",
-	"G7mpxMhN",
+	process.env.DB_NAME,
+	process.env.DB_USERNAME,
+	process.env.DB_PASSWORD,
 
 	{
-		host: "localhost",
+		host: process.env.DB_HOST,
 		dialect: "mysql",
 		logging: true,
 	}
