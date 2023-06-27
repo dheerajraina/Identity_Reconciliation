@@ -45,6 +45,34 @@ async function store_all_phonenumbers_and_emails_and_primary_ids(
 	return;
 }
 
+
+// find the oldest primary record if more than one primary records match with the request payload
+function find_oldest_primary_record(): Promise<number[]> {
+	return new Promise(async (resolve, reject) => {
+		let primary_ids_list = Array.from(primary_id_store.keys());
+		await Contact.findAll({
+			where: {
+				id: {
+					[Op.in]: primary_ids_list,
+				},
+			},
+		}).then(async (result) => {
+			// sorts primary contacts in chronological manner
+
+			result.sort((a, b) => a.dataValues.createdAt - b.dataValues.createdAt);
+
+			oldest_record_id = result[0]?.dataValues.id;
+
+			primary_ids_list = primary_ids_list.filter(
+				(id) => id !== oldest_record_id
+			);
+
+			resolve(primary_ids_list);
+		});
+	});
+}
+
+
 async function add_record(
 	email: string,
 	phone_number: string,
