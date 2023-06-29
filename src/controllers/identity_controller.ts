@@ -16,6 +16,9 @@ async function identity_controller(req: Request, res: Response): Promise<void> {
 	const req_email: string = req.body.email || "";
 	const req_phone: string = req.body.phoneNumber || "";
 	clear_all_globals();
+	
+	// THOUGHT: see if a function can be added here which sets two boolean varibles , for ex: email_exists , number_exists; and as soon as both of them are true break of of the find operation
+	// above step might help us in getting rid of "store_all_phonenumbers_and_emails_and_primary_ids" function and will reduce time complexity greatly i think
 	await Contact.findAll({
 		where: Sequelize.or({ email: req_email }, { phoneNumber: req_phone }),
 	}).then(async (result) => {
@@ -176,6 +179,9 @@ async function update_records(target_id_list, replace_with): Promise<boolean> {
 	}
 }
 
+
+// THOUGHT: what if we just have a seperate collection for storing this information ; whenever a primary contact changes to secondary, the table updates
+// Above thought if implemented successfully, it surely will take up space but will time complexity will reduce significantly
 // fetching the primary contact and all the linked contacts
 function fetch_identity(target_id): Promise<void> {
 	return new Promise(async (resolve, reject) => {
