@@ -28,6 +28,7 @@ async function identity_controller(req: Request, res: Response): Promise<void> {
 				contact: {
 					primaryContatctId: newly_created_id,
 					emails: Array.from(email_store.keys()),
+					phoneNumbers: Array.from(phone_number_store.keys()),
 					secondaryContactIds: [],
 				},
 			});
